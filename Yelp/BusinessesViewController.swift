@@ -8,9 +8,10 @@
 
 import UIKit
 
-class BusinessesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class BusinessesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate {
     
     var businesses: [Business]!
+    var searchBar: UISearchBar!
     
     @IBOutlet weak var tableView: UITableView!
     
@@ -21,6 +22,15 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         tableView.dataSource = self
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 120
+        
+        searchBar = UISearchBar()
+        searchBar.sizeToFit()
+        searchBar.delegate = self
+        navigationItem.titleView = searchBar
+        
+        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tableView.addGestureRecognizer(tap)
         
         Business.searchWithTerm(term: "Thai", completion: { (businesses: [Business]?, error: Error?) -> Void in
             
@@ -70,7 +80,26 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         return cell
     }
     
-
+    public func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        Business.searchWithTerm(term: searchText, completion: { (businesses: [Business]?, error: Error?) -> Void in
+            
+            self.businesses = businesses
+            self.tableView.reloadData()
+            
+            if let businesses = businesses {
+                for business in businesses {
+                    print(business.name!)
+                    print(business.address!)
+                }
+            }
+            
+            }
+        )
+    }
+    
+    public func dismissKeyboard() {
+        searchBar.resignFirstResponder()
+    }
     
     /*
      // MARK: - Navigation
