@@ -7,11 +7,15 @@
 //
 
 import UIKit
+import MBProgressHUD
 
-class BusinessesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate {
+class BusinessesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate, UIScrollViewDelegate {
     
     var businesses: [Business]!
     var searchBar: UISearchBar!
+    var searchQuery: String!
+    var searchOffset: Int!
+    var isMoreDataLoading = false
     
     @IBOutlet weak var tableView: UITableView!
     
@@ -32,11 +36,15 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tableView.addGestureRecognizer(tap)
         
+        MBProgressHUD.showAdded(to: self.view, animated: true)
         Business.searchWithTerm(term: "Thai", completion: { (businesses: [Business]?, error: Error?) -> Void in
             
             self.businesses = businesses
-            
             self.tableView.reloadData()
+            MBProgressHUD.hide(for: self.view, animated: true)
+            self.searchQuery = "Thai"
+            self.searchOffset = self.businesses.count
+            self.isMoreDataLoading = false
             
             if let businesses = businesses {
                 for business in businesses {
@@ -66,25 +74,28 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         // Dispose of any resources that can be recreated.
     }
     
-    public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if businesses != nil {
             return businesses.count
         }
         return 0
     }
     
-    public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "BusinessCell", for: indexPath) as! BusinessCell
         cell.business = businesses[indexPath.row]
         
         return cell
     }
     
-    public func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         Business.searchWithTerm(term: searchText, completion: { (businesses: [Business]?, error: Error?) -> Void in
             
             self.businesses = businesses
             self.tableView.reloadData()
+            self.searchQuery = searchText
+            self.searchOffset = self.businesses.count
+            self.isMoreDataLoading = false
             
             if let businesses = businesses {
                 for business in businesses {
@@ -97,8 +108,34 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         )
     }
     
-    public func dismissKeyboard() {
+    func dismissKeyboard() {
         searchBar.resignFirstResponder()
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if isMoreDataLoading {
+            return
+        }
+        
+        let scrollViewContentHeight = tableView.contentSize.height
+        let scrollOffsetThreshold = scrollViewContentHeight - tableView.bounds.size.height
+        
+        if scrollView.contentOffset.y > scrollOffsetThreshold && tableView.isDragging {
+            isMoreDataLoading = true
+            MBProgressHUD.showAdded(to: self.view, animated: true)
+            Business.searchWithTerm(term: self.searchQuery, sort: nil, categories: nil, deals: nil, offset: self.searchOffset, completion: { (businesses: [Business]?, error: Error?) -> Void in
+                if let businesses = businesses {
+                    self.businesses = self.businesses + businesses
+                    self.tableView.reloadData()
+                    MBProgressHUD.hide(for: self.view, animated: true)
+                    self.searchOffset = self.searchOffset + self.businesses.count
+                    self.isMoreDataLoading = false
+                }
+
+                }
+            )
+            
+        }
     }
     
     /*
