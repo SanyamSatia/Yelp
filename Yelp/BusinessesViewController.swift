@@ -31,6 +31,8 @@ class BusinessesViewController: UIViewController, UITableViewDataSource, UITable
         searchBar.sizeToFit()
         searchBar.delegate = self
         navigationItem.titleView = searchBar
+        navigationController?.navigationBar.barTintColor = UIColor.red
+        navigationController?.navigationBar.isTranslucent = false
         
         
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
